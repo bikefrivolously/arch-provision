@@ -20,4 +20,4 @@ fab --prompt-for-login-password root@<ip_addr> provision --hostname=<new_host_na
 Reboot into the new system. The root password is the same as what you set from the ISO.
 
 If desired, run from the provisioning system:
-fab root@<IP> setup-user -u <USER>
+fab root@<ip_addr> setup-user -u <USER>
