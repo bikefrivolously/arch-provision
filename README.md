@@ -15,7 +15,7 @@ Check your IP address:
 ip addr
 
 Then, on the system with arch-provision:
-fab --prompt-for-login-password root@<IP> provision --hostname=<new_host_name>
+fab --prompt-for-login-password root@<ip_addr> provision --hostname=<new_host_name>
 
 Reboot into the new system. The root password is the same as what you set from the ISO.
 
