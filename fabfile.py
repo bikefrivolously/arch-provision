@@ -46,7 +46,7 @@ def mount_partitions(c):
 def upload_mirrorlist(c, mirrorlist='/etc/pacman.d/mirrorlist'):
     c.put(mirrorlist, '/etc/pacman.d/mirrorlist')
 
-def install_base(c, packages=['base', 'base-devel', 'grub', 'openssh', 'neovim', 'bash-completion', 'python']):
+def install_base(c, packages=['base', 'base-devel', 'grub', 'openssh', 'neovim', 'bash-completion', 'python', 'fish', 'haveged', 'termite-terminfo']):
     if 'grub' in packages and is_uefi(c):
         packages.append('efibootmgr')
     p = ' '.join(packages)
@@ -96,6 +96,9 @@ def enable_dhcp(c):
 def enable_root_ssh(c):
     c.run('sed -i "s/^#PermitRootLogin .*$/PermitRootLogin yes/" /mnt/etc/ssh/sshd_config')
     chroot_run(c, 'systemctl enable sshd.service')
+
+def enable_haveged(c):
+    chroot_run(c, 'systemctl enable haveged.service')
 
 def make_initramfs(c):
     c.run('sed -i.bak "s/^HOOKS=.*block/& lvm2/" /mnt/etc/mkinitcpio.conf')
@@ -151,7 +154,39 @@ This is a destructive operation.'''.format(c.host))
         mount_partitions(c)
         upload_mirrorlist(c)
         install_base(c)
-        patch_arch_chroot(c)
+        #patch_arch_chroot(c)
+        create_fstab(c)
+        set_timezone(c)
+        set_locale(c)
+        set_hostname(c, hostname)
+        enable_dhcp(c)
+        enable_root_ssh(c)
+        enable_haveged(c)
+        make_initramfs(c)
+        set_root_password(c)
+        install_grub(c)
+        setup_sudo(c)
+        install_keys(c)
+        create_skel(c)
+        post_install_cleanup(c)
+
+@task
+def provision_laptop(c, hostname):
+    check_local(c)
+    print('''About to provision {}.
+This is a destructive operation.'''.format(c.host))
+    i = input('Are you sure? (y/N) ')
+    if i.lower() not in ('y', 'yes'):
+        return
+
+    print('Checking internet connectivity...', end='')
+    if is_internet_connected(c):
+        print('OK')
+        enable_ntp(c)
+        #partition_disk(c, '/dev/sda')
+        #mount_partitions(c)
+        upload_mirrorlist(c)
+        install_base(c)
         create_fstab(c)
         set_timezone(c)
         set_locale(c)
@@ -160,7 +195,7 @@ This is a destructive operation.'''.format(c.host))
         enable_root_ssh(c)
         make_initramfs(c)
         set_root_password(c)
-        install_grub(c)
+        #install_grub(c)
         setup_sudo(c)
         install_keys(c)
         create_skel(c)
@@ -171,7 +206,7 @@ def setup_user(c, username, admin=True):
     '''Create a new user. Must run after rebooting into the new OS'''
     check_local(c)
     password = getpass(prompt='New passford for {}: '.format(username))
-    c.run('useradd --user-group --create-home {}'.format(username))
+    c.run('useradd --user-group --create-home --shell /usr/bin/fish {}'.format(username))
     c.run('echo {}:{} | chpasswd'.format(username, password))
     c.run('mkdir -p /home/{}/.ssh'.format(username))
     c.put('authorized_keys', '/home/{}/.ssh/'.format(username))
